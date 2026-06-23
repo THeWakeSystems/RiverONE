@@ -27,7 +27,7 @@
 ## 📊 Pipeline Overview
 
 <p align="center">
-  <img src="docs/riverone-qc-compression-flow.png" alt="Compression Pipeline" width="720">
+  <img src="docs/riverone-qc-compression-flow1.png" alt="Compression Pipeline" width="720">
 </p>
 
 Three-stage compression: **AQLM quantization** (252 matrices → ~1 bit/param) → **MiniViT** (vision weight multiplexing) → **PV-Tuning** (P/V optimization for accuracy recovery). Total compression: **8.9 GB → 3.2 GB (2.8×)**.
