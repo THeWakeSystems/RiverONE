@@ -203,5 +203,5 @@ RiverONE/
 ---
 
 <p align="center">
-  <sub>RiverONE-QC-4B-v1 · Qwen3-4B + Ising Vision Encoder · Built at THeWake Systems</sub>
+  <sub>RiverONE-QC-4B-v1 · InternVL3.5-4B + Ising Vision Encoder · Built at THeWake Systems</sub>
 </p>
