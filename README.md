@@ -26,46 +26,11 @@
 
 ## 📊 Pipeline Overview
 
-```
-                      RiverONE-QC-4B-v1 (bf16)
-                      ┌─────────────────────────┐
-                      │   Vision  │   LLM 4B     │
-                      │  Encoder  │  Qwen3-4B    │
-                      │  miniViT  │               │
-                      └─────────────────────────┘
-                         ~8.9 GB  |  252 matrices
-                                  │
-                    ┌─────────────┴─────────────┐
-                    │   Stage 1: AQLM 1×16      │
-                    │   quantize/quantize.py    │
-                    │   36 layers, ~1 bit/param │
-                    └─────────────┬─────────────┘
-                                  │
-                         ~4.5 GB  │  ~3.5 GB savings
-                                  │
-                    ┌─────────────┴─────────────┐
-                    │   Stage 2: MiniViT        │
-                    │   compress/*.py           │
-                    │   Block 23→24 sharing     │
-                    │   + distillation          │
-                    └─────────────┬─────────────┘
-                                  │
-                         ~3.2 GB  │  ~1.3 GB savings
-                                  │
-                    ┌─────────────┴─────────────┐
-                    │   Stage 3: PV-Tuning      │
-                    │   finetune/train_*.py     │
-                    │   P-step + V-step         │
-                    │   on QcalEval SFT         │
-                    └─────────────┬─────────────┘
-                                  │
-                         ~3.2 GB  │  Accuracy ↑
-                                  ▼
-                      RiverONE-QC-4B-v1 (compressed)
-                      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                      Total: ~1.72B storage elements
-                      Compression ratio: ~2.8×
-```
+<p align="center">
+  <img src="docs/riverone-qc-compression-flow.png" alt="Compression Pipeline" width="720">
+</p>
+
+Three-stage compression: **AQLM quantization** (252 matrices → ~1 bit/param) → **MiniViT** (vision weight multiplexing) → **PV-Tuning** (P/V optimization for accuracy recovery). Total compression: **8.9 GB → 3.2 GB (2.8×)**.
 
 ## ✨ Key Features
 
