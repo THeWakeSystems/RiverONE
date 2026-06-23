@@ -19,7 +19,7 @@
   <img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white">
   <img src="https://img.shields.io/badge/torch-2.1+-ee4c2c?logo=pytorch&logoColor=white">
   <img src="https://img.shields.io/badge/CUDA-12.1+-76b900?logo=nvidia&logoColor=white">
-  <img src="https://img.shields.io/badge/license-internal-lightgrey">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-blue?logo=apache">
 </p>
 
 ---
