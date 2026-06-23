@@ -27,7 +27,7 @@
 ## 📊 Pipeline Overview
 
 <p align="center">
-  <img src="docs/riverone-qc-compression-flow1.png" alt="Compression Pipeline" width="720">
+  <img src="docs/riverone-qc-compression-flow2.png" alt="Compression Pipeline" width="720">
 </p>
 
 **RiverONE** treats VLM compression as a **simulated quantum computing problem**. A 4B-parameter multimodal model (8.9 GB) is compressed to 3.2 GB (2.8×) through three quantum-inspired stages — without running on quantum hardware. Each stage maps to a core quantum computing primitive: **state discretization**, **entanglement sharing**, and **variational optimization**.
