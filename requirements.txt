@@ -1,0 +1,26 @@
+# RiverOne Compression Pipeline - Consolidated Dependencies
+# Install: pip install -r requirements.txt
+
+# Deep Learning
+torch>=2.1.0
+torchvision
+
+# Transformers / Model Infrastructure
+transformers>=4.38.0
+accelerate>=0.20.0
+safetensors>=0.4.0
+
+# AQLM (PyPI inference package)
+aqlm>=1.1.0
+
+# Data
+datasets>=2.14.0
+numpy>=1.24.0
+pillow
+
+# Utilities
+tqdm>=4.65.0
+
+# Optional
+# wandb>=0.15.0    # Experiment tracking
+# flash-attn>=2.5.0  # Flash Attention v2

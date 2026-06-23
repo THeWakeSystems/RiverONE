@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Model weights (use Git LFS or external storage for publishing)
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+
+# Output / checkpoint directories
+outputs/
+*-checkpoint/
+checkpoint-*/
+
+# Calibration / training data (large files)
+*.parquet
+*.arrow
+
+# Logs (compressed summary in logs/)
+*.log
+
+# QcalEval test data (large JSONL + images)
+PV-tuning/QcalEval/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.venv/
+venv/
+*aqlm_env/
