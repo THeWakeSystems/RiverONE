@@ -199,6 +199,7 @@ RiverONE/
 | AQLM: Extreme Compression of LLMs via Additive Quantization | ICML 2024 | [arXiv 2401.06118](https://arxiv.org/abs/2401.06118) |
 | MiniViT: Compressing Vision Transformers with Weight Multiplexing | CVPR 2022 | [arXiv 2204.07154](https://arxiv.org/abs/2204.07154) |
 | PV-Tuning: Beyond Straight-Through Estimation | NeurIPS 2024 | [arXiv 2405.14852](https://arxiv.org/abs/2405.14852) |
+| WAIC Workshop — RiverONE: Quantum-Inspired VLM Compression | WAIC 2024 | [PDF](docs/waic_workshop.pdf) |
 
 ---
 
