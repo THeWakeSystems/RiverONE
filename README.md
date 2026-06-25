@@ -13,6 +13,7 @@
   <a href="docs/compress.md"><img src="https://img.shields.io/badge/docs-compress-blue"></a>
   <a href="docs/finetune.md"><img src="https://img.shields.io/badge/docs-finetune-blue"></a>
   <a href="docs/PV_TUNING_TECHNICAL_DOC.md"><img src="https://img.shields.io/badge/paper-PV_Tuning-red"></a>
+  <a href="https://riverone.vip.cpolar.cn"><img src="https://img.shields.io/badge/demo-🖥️_live-green"></a>
 </p>
 
 <p align="center">
