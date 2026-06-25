@@ -114,6 +114,8 @@ VQC ParamGen inverts the compression paradigm: instead of compressing existing w
 
 The low-rank decomposition is the key enabler: a weight matrix of shape [4304, 1152] (~5M parameters) is generated from only r × (out_dim + in_dim) HyperNetwork outputs. With rank=64, this reduces the generation head to ~350K parameters — a >14× compression of the generation pathway itself.
 
+**VQCGeneratedLinear** provides a drop-in `nn.Linear` replacement with internally learned context vectors and VQC-driven weight synthesis. This enables seamless integration into existing architectures — for example, replacing the second FFN layer in a Transformer encoder with VQC-generated weights, enabling end-to-end quantum-classical hybrid training.
+
 **Key insight**: This is quantum-classical **parameter synthesis** — the VQC acts as a structured random projection with trainable unitary rotations, and the HyperNetwork learns to map these quantum features to the weight manifold. Unlike post-hoc compression, this approach *generates* weights that are born in a quantum-informed subspace.
 
 ---
@@ -188,10 +190,11 @@ Run the VQC-based MLP weight parameter generation demo:
 ```bash
 cd paramgen
 pip install -r requirements.txt
-python run_demo.py
+python run_demo.py          # Pure VQC weight generation demo
+python transformer_vqc.py   # VQC-Transformer end-to-end training
 ```
 
-> 📖 Model definitions in `paramgen/models.py` | Utilities in `paramgen/utils.py`
+> 📖 Model definitions in `paramgen/models.py` | Utilities in `paramgen/utils.py` | Transformer example in `paramgen/transformer_vqc.py`
 
 ---
 
@@ -204,7 +207,7 @@ RiverONE/
 ├── quantize/         State discretization configs (25 scripts)
 ├── compress/         Entanglement multiplexing: apply, distill, verify
 ├── finetune/         Variational recovery: P/V optimization loop
-├── paramgen/         VQC parameter generation: models, utils, demo
+├── paramgen/         VQC parameter generation: models, utils, demo, transformer
 ├── tools/            Utilities: dequantize, analyze, swap, eval runs
 ├── docs/             Full documentation + technical paper
 ├── weights/          Model weight outputs (gitignored)
