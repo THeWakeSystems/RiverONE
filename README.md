@@ -31,7 +31,7 @@
   <img src="docs/riverone-qc-compression-flow2.png" alt="Compression Pipeline" width="720">
 </p>
 
-**RiverONE** treats VLM compression as a **simulated quantum computing problem**. A 4B-parameter multimodal model (8.9 GB) is compressed to 3.2 GB (2.8×) through three quantum-inspired stages — without running on quantum hardware. Each stage maps to a core quantum computing primitive: **state discretization**, **entanglement sharing**, and **variational optimization**.
+**RiverONE** treats VLM compression as a **simulated quantum computing problem**. A 4B-parameter multimodal model (8.9 GB) is compressed to 3.2 GB (2.8×) through three quantum-inspired stages — without running on quantum hardware. Each stage maps to a core quantum computing primitive: **state discretization**, **entanglement sharing**, and **variational optimization**. Additionally, VQC ParamGen explores quantum circuit-based **weight synthesis** for neural network parameters.
 
 ---
 
@@ -94,6 +94,27 @@ PV-Tuning mirrors the **Variational Quantum Eigensolver (VQE)** — the most suc
 The **subspace trick** is the quantum magic: instead of updating all 1.5M+ code assignments simultaneously (exponentially expensive, like full state tomography), PV-Tuning selects only the top-τ most "uncertain" groups (~0.1% per step). This is equivalent to measuring only the qubits with the largest gradient — a **partial measurement** that avoids disturbing the converged subspace.
 
 **Key insight**: The P/V loop provably converges because each step is a projection onto a smaller feasible set — exactly the same mathematical structure as the quantum variational principle, where each measurement collapses the state toward the ground energy.
+
+---
+
+### Stage 4 — VQC ParamGen: Quantum Circuit Parameter Generation
+
+> *"Neural network weights as quantum measurement outcomes."*
+
+VQC ParamGen inverts the compression paradigm: instead of compressing existing weights, it **generates** MLP weight matrices directly from a Variational Quantum Circuit (VQC). Random classical features are amplitude-encoded into a quantum state, processed through variational layers with ring entanglement, then measured — and the measurement outcomes drive a HyperNetwork that synthesizes the target weight matrix via low-rank factorization.
+
+| Quantum Concept | VQC ParamGen Implementation |
+|:---|:---|
+| **Amplitude encoding** | Random features mapped to 2ⁿ-wires quantum state amplitudes |
+| **Variational ansatz** | RX, RY, RZ rotation gates + CNOT ring entanglement across layers |
+| **Depolarizing noise** | Probabilistic X/Y/Z gate injection simulates NISQ-era hardware |
+| **PauliZ measurement** | Expectation values form a classical feature vector for the HyperNetwork |
+| **Quantum-classical bridge** | HyperNetwork (MLP) maps n-wire measurements → low-rank factors U, V |
+| **Matrix reconstruction** | W = U @ V^T, with rank r ≪ min(out_dim, in_dim) avoiding ~5M direct outputs |
+
+The low-rank decomposition is the key enabler: a weight matrix of shape [4304, 1152] (~5M parameters) is generated from only r × (out_dim + in_dim) HyperNetwork outputs. With rank=64, this reduces the generation head to ~350K parameters — a >14× compression of the generation pathway itself.
+
+**Key insight**: This is quantum-classical **parameter synthesis** — the VQC acts as a structured random projection with trainable unitary rotations, and the HyperNetwork learns to map these quantum features to the weight manifold. Unlike post-hoc compression, this approach *generates* weights that are born in a quantum-informed subspace.
 
 ---
 
@@ -160,6 +181,18 @@ bash run_pv_tuning.sh
 
 > 📖 [PV-Tuning guide →](docs/finetune.md) | [Technical paper →](docs/PV_TUNING_TECHNICAL_DOC.md)
 
+### Stage 4 — VQC Weight Generation
+
+Run the VQC-based MLP weight parameter generation demo:
+
+```bash
+cd paramgen
+pip install -r requirements.txt
+python run_demo.py
+```
+
+> 📖 Model definitions in `paramgen/models.py` | Utilities in `paramgen/utils.py`
+
 ---
 
 ## 📁 Directory Structure
@@ -171,6 +204,7 @@ RiverONE/
 ├── quantize/         State discretization configs (25 scripts)
 ├── compress/         Entanglement multiplexing: apply, distill, verify
 ├── finetune/         Variational recovery: P/V optimization loop
+├── paramgen/         VQC parameter generation: models, utils, demo
 ├── tools/            Utilities: dequantize, analyze, swap, eval runs
 ├── docs/             Full documentation + technical paper
 ├── weights/          Model weight outputs (gitignored)

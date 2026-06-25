@@ -13,6 +13,9 @@ safetensors>=0.4.0
 # AQLM (PyPI inference package)
 aqlm>=1.1.0
 
+# Quantum Computing
+torchquantum>=0.1.8
+
 # Data
 datasets>=2.14.0
 numpy>=1.24.0
