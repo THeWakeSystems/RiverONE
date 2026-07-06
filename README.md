@@ -237,6 +237,7 @@ RiverONE/
 | AQLM: Extreme Compression of LLMs via Additive Quantization | ICML 2024 | [arXiv 2401.06118](https://arxiv.org/abs/2401.06118) |
 | MiniViT: Compressing Vision Transformers with Weight Multiplexing | CVPR 2022 | [arXiv 2204.07154](https://arxiv.org/abs/2204.07154) |
 | PV-Tuning: Beyond Straight-Through Estimation | NeurIPS 2024 | [arXiv 2405.14852](https://arxiv.org/abs/2405.14852) |
+| VQC-MLPNet: An Unconventional Hybrid Quantum-Classical Architecture for Scalable and Robust Quantum Machine Learning | preprint | [arXiv:2506.10275](https://arxiv.org/abs/2506.10275)
 | RiverONE: Generating Knowledge-Intensive VLM by Simulated Quantum Machines | Submit to WAIC 2026 | [PDF](docs/waic_workshop.pdf) |
 
 ---
