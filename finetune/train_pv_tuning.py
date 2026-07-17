@@ -10,6 +10,7 @@ The objective is supervised cross entropy on assistant tokens from QcalEval.
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import os
 import random
@@ -64,7 +65,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output_dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--cache_dir", type=Path, default=PV_DIR / "cache")
 
-    parser.add_argument("--device", default="auto" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--num_gpus", type=int, default=1, help="Number of GPUs for model parallelism (1-4)")
     parser.add_argument("--load_dtype", default="bfloat16", choices=["bfloat16", "float16", "float32"])
     parser.add_argument("--master_dtype", default="float32", choices=["bfloat16", "float16", "float32"])
@@ -94,19 +95,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no_freeze_vision", action="store_false", dest="freeze_vision")
 
     parser.add_argument("--lr", type=float, default=3e-4)
-    parser.add_argument("--code_lr", type=float, default=1e-2)
+    parser.add_argument("--code_lr", type=float, default=3e-4)
     parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--adam_beta1", type=float, default=0.90)
     parser.add_argument("--adam_beta2", type=float, default=0.95)
+    parser.add_argument("--proxy_beta1", type=float, default=0.90)
     parser.add_argument("--lr_scheduler", default="none", choices=["none", "cosine"])
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--warmup_steps", type=int, default=0, help="Override warmup_ratio with explicit step count")
 
-    parser.add_argument("--beam_size", type=int, default=1)
+    parser.add_argument("--beam_size", type=int, default=3)
     parser.add_argument("--max_code_change_per_step", type=float, default=1e-3)
     parser.add_argument("--code_trust_ratio", type=float, default=None)
     parser.add_argument("--code_update_every", type=int, default=1)
-    parser.add_argument("--delta_decay", type=float, default=0.0)
+    parser.add_argument("--delta_decay", type=float, default=0.1)
     parser.add_argument("--max_quantized_layers", type=int, default=None)
     parser.add_argument("--gradient_checkpointing", action="store_true")
 
@@ -181,7 +183,10 @@ class TrainableAQLMLinear(nn.Module):
         return self.out_features, self.in_features
 
     def dequantize(self, dtype: Optional[torch.dtype] = None) -> torch.Tensor:
-        weight = _dequantize_weight(self.codes, self.codebooks, self.scales)
+        with torch.autocast(device_type="cuda", enabled=False):
+            weight = _dequantize_weight(
+                self.codes, self.codebooks.float(), self.scales.float()
+            )
         return weight if dtype is None else weight.to(dtype)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
@@ -280,8 +285,6 @@ def replace_aqlm_layers_for_training(
 
     quantized_modules: list[tuple[str, TrainableAQLMLinear]] = []
     for base in sorted(groups):
-        if max_layers is not None and len(quantized_modules) >= max_layers:
-            break
         info = groups[base]
         old_module = _module_get(model, base.split("."))
         bias_key = f"{base}.bias"
@@ -289,20 +292,51 @@ def replace_aqlm_layers_for_training(
         if isinstance(bias, nn.Parameter):
             bias = bias.detach().cpu()
 
+        codebooks = tensor_for(info["codebooks"])
+        codes = tensor_for(info["codes"])
+        scales = tensor_for(info["scales"])
+
+        # Prefill old module's weight with dequantized AQLM weight (avoids random init)
+        # codes may be int16 with negative values representing high half (32768-65535)
+        codes_prefill = codes.detach().clone()
+        if torch.iinfo(codes_prefill.dtype).bits < 32:
+            codes_prefill = codes_prefill.to(torch.int32)
+            codes_prefill = torch.where(codes_prefill < 0, codes_prefill + codebooks.shape[1], codes_prefill)
+        with torch.no_grad():
+            dequant_weight = _dequantize_weight(codes_prefill, codebooks.float(), scales.float())
+        if hasattr(old_module, 'weight') and isinstance(old_module.weight, nn.Parameter):
+            old_module.weight.data.copy_(dequant_weight.to(old_module.weight.dtype))
+        if bias is not None and hasattr(old_module, 'bias') and isinstance(old_module.bias, nn.Parameter):
+            old_module.bias.data.copy_(bias.to(old_module.bias.dtype))
+
+        # Limit proxy layers: only the first max_layers get weight_proxy for V-step code updates
+        layer_use_proxy = use_proxy
+        if max_layers is not None and len(quantized_modules) >= max_layers:
+            layer_use_proxy = False  # remaining layers: no proxy (inference-only, saves GPU memory)
+
         new_module = TrainableAQLMLinear(
-            codebooks=tensor_for(info["codebooks"]),
-            codes=tensor_for(info["codes"]),
-            scales=tensor_for(info["scales"]),
+            codebooks=codebooks,
+            codes=codes,
+            scales=scales,
             bias=bias,
             master_dtype=master_dtype,
             buffer_dtype=buffer_dtype,
-            use_proxy=use_proxy,
+            use_proxy=layer_use_proxy,
         )
         # 放置到旧模块所在 GPU（device_map="auto" 后各层可能在不同卡上）
         old_device = next(old_module.parameters()).device
         new_module.to(old_device)
         _module_set(model, base.split("."), new_module)
-        quantized_modules.append((base, new_module))
+        if layer_use_proxy:
+            quantized_modules.append((base, new_module))
+
+        # Explicitly free old module's parameters (random nn.Linear weights for MISSING keys)
+        # to prevent OOM when model.to(device) copies everything to GPU
+        for p in old_module.parameters():
+            p.data = torch.empty(0)
+        del old_module
+        if len(quantized_modules) % 25 == 0:
+            gc.collect()
 
     if not quantized_modules:
         raise RuntimeError(f"No AQLM quantized layers found in {model_dir}")
@@ -496,6 +530,7 @@ class QcalEvalSFTDataset(Dataset):
             "labels": labels,
             "attention_mask": torch.ones_like(input_ids),
             "pixel_values": pixel_values,
+            "sample_idx": torch.tensor(idx, dtype=torch.int32),
         }
 
 
@@ -523,6 +558,7 @@ class QcalEvalCollator:
             "labels": torch.stack(labels, dim=0),
             "attention_mask": torch.stack(attention_mask, dim=0),
             "pixel_values": torch.cat(pixel_values, dim=0),
+            "sample_idx": torch.stack([e["sample_idx"] for e in examples], dim=0),
         }
         expected_image_tokens = batch["pixel_values"].shape[0] * self.num_image_token
         actual_image_tokens = (batch["input_ids"] == self.tokenizer.convert_tokens_to_ids(IMG_CONTEXT_TOKEN)).sum().item()
@@ -626,7 +662,7 @@ def configure_training(
     if non_quantized_params:
         param_groups.append({"params": non_quantized_params, "lr": args.lr, "betas": betas, "weight_decay": args.weight_decay})
     if proxy_params:
-        param_groups.append({"params": proxy_params, "lr": args.code_lr, "betas": (0.0, args.adam_beta2), "weight_decay": 0.0})
+        param_groups.append({"params": proxy_params, "lr": args.code_lr, "betas": (args.proxy_beta1, args.adam_beta2), "weight_decay": 0.0})
     if not param_groups:
         raise RuntimeError("No trainable parameters selected")
 
@@ -754,7 +790,6 @@ def main() -> None:
     )
     print(f"[PV] replaced {len(quantized_modules)} AQLM layers with training modules")
 
-    import gc
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -767,6 +802,21 @@ def main() -> None:
     if args.gradient_checkpointing:
         model.gradient_checkpointing_enable()
         model.enable_input_require_grads()
+
+    # NaN diagnostic: register forward hooks BEFORE multi-GPU splitting
+    _nan_source = []
+    def _nan_hook(name):
+        def hook(module, inp, out):
+            t = out[0] if isinstance(out, tuple) else out
+            if isinstance(t, torch.Tensor) and not torch.isfinite(t).all():
+                if not _nan_source:
+                    _nan_source.append(name)
+        return hook
+    for i, layer in enumerate(model.language_model.model.layers):
+        layer.register_forward_hook(_nan_hook(f"L{i}.block"))
+        layer.mlp.register_forward_hook(_nan_hook(f"L{i}.mlp"))
+    model.language_model.model.norm.register_forward_hook(_nan_hook("final_norm"))
+    model.language_model.lm_head.register_forward_hook(_nan_hook("lm_head"))
 
     # Model was loaded on CPU; move to target device(s) after layer replacement
     num_layers = len(model.language_model.model.layers)
@@ -891,7 +941,17 @@ def main() -> None:
                 loss = outputs.loss
 
             if not torch.isfinite(loss):
-                print(f"[PV] WARNING: NaN loss at step {global_step}, skipping batch")
+                source = "unknown"
+                if hasattr(outputs, 'logits'):
+                    logits_ok = torch.isfinite(outputs.logits).all()
+                    sl = outputs.logits[..., :-1, :].contiguous().float()
+                    sl_ok = torch.isfinite(sl).all()
+                    lbl = batch["labels"][..., 1:].contiguous()
+                    lbl_ok = lbl.min() >= -100
+                    source = f"logits={'ok' if logits_ok else 'NaN'}, shift_logits={'ok' if sl_ok else 'NaN'}, labels={'ok' if lbl_ok else 'BAD'}"
+                if _nan_source:
+                    source += f", first_nan={_nan_source[0]}"
+                print(f"[PV] WARNING: NaN at step {global_step}, {source}")
                 optimizer.zero_grad(set_to_none=True)
                 continue
             (loss / args.gradient_accumulation_steps).backward()

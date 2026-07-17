@@ -4,14 +4,14 @@
 
 <p align="center">
   <strong>Simulated Quantum Computing for VLM Compression</strong><br>
-  Quantum-inspired discretization · Entanglement-driven multiplexing · Variational recovery
+  Quantum-inspired discretization · Variational recovery · Entanglement-driven multiplexing
 </p>
 
 <p align="center">
   <a href="#-quick-start"><img src="https://img.shields.io/badge/quick_start-🚀-orange"></a>
   <a href="docs/quantize.md"><img src="https://img.shields.io/badge/docs-quantize-blue"></a>
-  <a href="docs/compress.md"><img src="https://img.shields.io/badge/docs-compress-blue"></a>
   <a href="docs/finetune.md"><img src="https://img.shields.io/badge/docs-finetune-blue"></a>
+  <a href="docs/compress.md"><img src="https://img.shields.io/badge/docs-compress-blue"></a>
   <a href="docs/PV_TUNING_TECHNICAL_DOC.md"><img src="https://img.shields.io/badge/paper-PV_Tuning-red"></a>
   <a href="https://riverone.vip.cpolar.cn"><img src="https://img.shields.io/badge/demo-🖥️_live-green"></a>
 </p>
@@ -31,7 +31,7 @@
   <img src="docs/riverone-qc-compression-flow2.png" alt="Compression Pipeline" width="720">
 </p>
 
-**RiverONE** treats VLM compression as a **simulated quantum computing problem**. A 4B-parameter multimodal model (8.9 GB) is compressed to 3.2 GB (2.8×) through three quantum-inspired stages — without running on quantum hardware. Each stage maps to a core quantum computing primitive: **state discretization**, **entanglement sharing**, and **variational optimization**. Additionally, VQC ParamGen explores quantum circuit-based **weight synthesis** for neural network parameters.
+**RiverONE** treats VLM compression as a **simulated quantum computing problem**. A 4B-parameter multimodal model (8.9 GB) is compressed to 3.0B elements (3.2 GB, 2.8×) through four quantum-inspired stages — without running on quantum hardware. Each stage maps to a core quantum computing primitive: **state discretization**, **variational optimization**, **entanglement sharing**, and **parameter synthesis**.
 
 ---
 
@@ -46,37 +46,18 @@ Classical neural network weights exist in a continuous vector space ℝᵈ. AQLM
 | Quantum Concept | AQLM Implementation |
 |:---|:---|
 | **Qubit register** (16 qubits) | Codebook of size 2¹⁶ = 65,536 basis vectors |
-| **State vector** | Each weight group of 16 values encoded as one codebook index |
+| **State vector** | Each weight group of 16 values encoded as codebook indices |
 | **Measurement** | Nearest-neighbor lookup: each group collapses to the closest codebook entry |
-| **Superposition** | Additive quantization reconstructs weights as linear combinations of basis states |
-| **State space** | 252 matrices × thousands of groups = millions of "quantum measurements" |
+| **Superposition** | Additive quantization: 2 codebooks combine linearly to reconstruct weights |
+| **State space** | 175 matrices × millions of groups = millions of "quantum measurements" |
 
-The **1×16 scheme** (out_group_size=1, in_group_size=16) means each group of 16 weights is represented by a single 16-bit index — exactly one measurement outcome from a 16-qubit system. The LLM's 7.9 GB of linear projections compress to 0.98 GB, an **8× reduction** — the same ratio as classical bits to qubits in certain encodings.
+The **2×16 scheme** (2 codebooks, 16-bit each) targets LLM layers 8-32 (25 of 36). Each group of 16 weights is encoded by two 16-bit code indices. The LLM's linear projections compress ~8× — the same ratio as classical bits to qubits in certain encodings. Early layers (L0-L7) and late layers (L33-L35) remain at full bf16 precision to preserve semantic understanding and output quality.
 
 **Key insight**: The codebook is a *learned quantum basis*. K-Means initialization finds the natural clustering of weight patterns (the "energy eigenstates"), and Adam optimization refines them — exactly analogous to finding the optimal measurement basis for a quantum system.
 
 ---
 
-### Stage 2 — MiniViT: Entanglement-Driven Multiplexing
-
-> *"Two layers, one state — entanglement without the hardware."*
-
-In quantum mechanics, **entangled particles share a single quantum state** regardless of distance. MiniViT applies this principle to vision transformers: adjacent blocks (23 and 24) are forced to **share the same weight state**, creating an entanglement-like coupling.
-
-| Quantum Concept | MiniViT Implementation |
-|:---|:---|
-| **Entanglement** | Blocks 23 and 24 share MSA + MLP weights (one state, two observers) |
-| **Unitary transform** | F1, F2 (16×16 matrices) act as learned unitary rotations between the shared state and each block |
-| **Weak measurement** | Depthwise convolution (dwconv) applies a minimal perturbation to break symmetry |
-| **Decoherence protection** | LayerNorm and TransformNorm preserve independent phase information per block |
-
-The result: **~14M parameters replaced by ~12K** — a compression ratio of >1000× for the coupled blocks. The transform matrices (F1, F2) function as **unitary gates** rotating the shared representation into each block's local "measurement basis." Distillation from the original ViT acts as a **quantum state tomography** — reconstructing the optimal transform from the teacher's output distribution.
-
-**Key insight**: This is entanglement *simulation* — two computational paths share one weight state, with minimal unitary corrections preserving their distinct behaviors. No quantum hardware required.
-
----
-
-### Stage 3 — PV-Tuning: Variational Quantum-Classical Optimization
+### Stage 2 — PV-Tuning: Variational Quantum-Classical Optimization
 
 > *"The VQE loop, but for neural network weights."*
 
@@ -94,6 +75,25 @@ PV-Tuning mirrors the **Variational Quantum Eigensolver (VQE)** — the most suc
 The **subspace trick** is the quantum magic: instead of updating all 1.5M+ code assignments simultaneously (exponentially expensive, like full state tomography), PV-Tuning selects only the top-τ most "uncertain" groups (~0.1% per step). This is equivalent to measuring only the qubits with the largest gradient — a **partial measurement** that avoids disturbing the converged subspace.
 
 **Key insight**: The P/V loop provably converges because each step is a projection onto a smaller feasible set — exactly the same mathematical structure as the quantum variational principle, where each measurement collapses the state toward the ground energy.
+
+---
+
+### Stage 3 — MiniViT: Entanglement-Driven Multiplexing
+
+> *"Two layers, one state — entanglement without the hardware."*
+
+In quantum mechanics, **entangled particles share a single quantum state** regardless of distance. MiniViT applies this principle to vision transformers: two adjacent block pairs (23→24 and 21→22) are forced to **share the same weight state**, creating an entanglement-like coupling.
+
+| Quantum Concept | MiniViT Implementation |
+|:---|:---|
+| **Entanglement** | Two pairs share MSA + MLP weights (one state, two observers each) |
+| **Unitary transform** | F1, F2 (16×16 matrices) act as learned unitary rotations between the shared state and each block |
+| **Weak measurement** | Depthwise convolution (dwconv) applies a minimal perturbation to break symmetry |
+| **Decoherence protection** | LayerNorm and TransformNorm preserve independent phase information per block |
+
+The result: **~28M parameters replaced by ~24K** — a compression ratio of >1000× for the coupled blocks. The transform matrices (F1, F2) function as **unitary gates** rotating the shared representation into each block's local "measurement basis." Knowledge distillation from the original ViT acts as a **quantum state tomography** — reconstructing the optimal transform from the teacher's output distribution.
+
+**Key insight**: This is entanglement *simulation* — two computational paths share one weight state, with minimal unitary corrections preserving their distinct behaviors. No quantum hardware required.
 
 ---
 
@@ -132,7 +132,7 @@ Traditional compression pipelines view quantization as an *engineering tradeoff*
 | Fine-tuning is gradient descent | Fine-tuning is variational optimization with discrete measurements |
 | Quality loss is inevitable | Quality is recoverable through the variational principle |
 
-This perspective isn't just philosophical — it **predicts** that PV-Tuning should converge (Theorem 3.1), that 1×16 is the natural "qubit encoding" for this architecture, and that entanglement-style sharing should preserve information better than independent compression.
+This perspective isn't just philosophical — it **predicts** that PV-Tuning should converge (Theorem 3.1), that 2×16 is the natural "qubit encoding" for this architecture, and that entanglement-style sharing should preserve information better than independent compression.
 
 ---
 
@@ -148,32 +148,19 @@ pip install -r requirements.txt
 
 ### Stage 1 — AQLM State Discretization
 
-Discretize all 36 LLM layers into the 16-qubit codebook space:
+Discretize LLM layers 8-32 (25 layers) into the 2×16 codebook space:
 
 ```bash
 cd quantize
 pip install -r requirements.txt
-python quantize.py          # ~2-3.5 hours on A100
+python quantize.py          # ~3.5 hours on A100
 ```
 
 > 📖 [Full quantization guide →](docs/quantize.md)
 
-### Stage 2 — MiniViT Entanglement
+### Stage 2 — PV-Tuning Variational Recovery
 
-Entangle adjacent vision transformer blocks via weight multiplexing:
-
-```bash
-cd compress
-python apply_minivit.py     # Entangle blocks 23→24
-python distill_minivit.py   # State tomography (distillation)
-python verify_minivit.py    # Verify entanglement integrity
-```
-
-> 📖 [Full compression guide →](docs/compress.md)
-
-### Stage 3 — PV-Tuning Variational Recovery
-
-Run the VQE-like P/V loop for accuracy recovery:
+Run the VQE-like P/V loop for accuracy recovery on quantized weights:
 
 ```bash
 cd finetune
@@ -183,18 +170,55 @@ bash run_pv_tuning.sh
 
 > 📖 [PV-Tuning guide →](docs/finetune.md) | [Technical paper →](docs/PV_TUNING_TECHNICAL_DOC.md)
 
-### Stage 4 — VQC Weight Generation
+### Stage 3 — MiniViT Entanglement
 
-Run the VQC-based MLP weight parameter generation demo:
+Entangle adjacent vision transformer blocks via weight multiplexing (two pairs: 23→24 + 21→22):
+
+```bash
+cd compress
+# Stage 3a: First pair (23→24)
+python apply_minivit_23_24.py
+python distill_minivit_23_24.py --epochs 10 --batch-size 4 --lr 1e-3
+python verify_minivit.py --check minivit
+
+# Stage 3b: Second pair (21→22, stacked)
+python apply_minivit_21_22.py
+python distill_minivit_21_22.py --epochs 10 --steps-per-epoch 50 --lr 1e-3
+python verify_minivit.py --check distilled
+```
+
+> 📖 [Full compression guide →](docs/compress.md)
+
+### Stage 4 — VQC Distillation (Required)
+
+Compensate MiniViT shared-block accuracy loss via dual VQC weight generation.
+This stage is **mandatory** — it replaces shared MLP weights (fc1, fc2) in blocks 22/24
+with VQC-generated synthetic weights through a 3-phase pipeline:
 
 ```bash
 cd paramgen
 pip install -r requirements.txt
-python run_demo.py          # Pure VQC weight generation demo
-python transformer_vqc.py   # VQC-Transformer end-to-end training
+
+# Phase 1a: Train VQC to reconstruct fc1 weights (per block)
+python train_vqc_fc1.py --teacher_dir ../weights/<aqlm_model>
+
+# Phase 1b: Train VQC to reconstruct fc2 weights (per block)
+python train_vqc_fc2.py --teacher_dir ../weights/<aqlm_model>
+
+# Phase 2: Full-forward dual VQC distillation against teacher ViT
+python distill_vqc_dual.py \
+  --teacher_dir ../weights/<aqlm_model> \
+  --student_dir ../weights/miniViT_21_24_distilled
+
+# Phase 3: Inject VQC-generated weights into final model
+python inject_vqc.py \
+  --src_dir ../weights/miniViT_21_24_distilled \
+  --out_dir ../weights/miniViT_21_24_distilled_vqc
+
+# Output: weights/miniViT_21_24_distilled_vqc/
 ```
 
-> 📖 Model definitions in `paramgen/models.py` | Utilities in `paramgen/utils.py` | Transformer example in `paramgen/transformer_vqc.py`
+> 📖 Architecture: `vqc_models.py` | P1a: `train_vqc_fc1.py` | P1b: `train_vqc_fc2.py` | P2: `distill_vqc_dual.py` | P3: `inject_vqc.py`
 
 ---
 
@@ -204,11 +228,25 @@ python transformer_vqc.py   # VQC-Transformer end-to-end training
 RiverONE/
 ├── engine/           AQLM quantization core (quantum state engine)
 │   └── src/          aq, kmeans, beam_search, modelutils, ...
-├── quantize/         State discretization configs (25 scripts)
-├── compress/         Entanglement multiplexing: apply, distill, verify
-├── finetune/         Variational recovery: P/V optimization loop
-├── paramgen/         VQC parameter generation: models, utils, demo, transformer
-├── tools/            Utilities: dequantize, analyze, swap, eval runs
+├── quantize/         Stage 1 — State discretization (2×16 L8-L32)
+│   ├── quantize.py   ★ Production entry point
+│   ├── _framework.py AQLM engine framework
+│   ├── verify.py     Post-quantization verification
+│   └── ...           Analysis & utility tools
+├── finetune/         Stage 2 — Variational recovery: P/V optimization loop
+├── compress/         Stage 3 — Entanglement multiplexing (MiniViT ×2 pairs)
+│   ├── apply_minivit_23_24.py   Pair 1: block 23→24 sharing
+│   ├── distill_minivit_23_24.py Pair 1: distillation
+│   ├── apply_minivit_21_22.py   Pair 2: block 21→22 sharing
+│   ├── distill_minivit_21_22.py Pair 2: distillation
+│   └── verify_minivit.py        Verification
+├── paramgen/         Stage 4 — VQC distillation (mandatory)
+│   ├── vqc_models.py      ★ VQC model definitions
+│   ├── train_vqc_fc1.py   ★ Phase 1a: fc1 weight reconstruction
+│   ├── train_vqc_fc2.py   ★ Phase 1b: fc2 weight reconstruction
+│   ├── distill_vqc_dual.py★ Phase 2:  dual VQC distillation
+│   └── inject_vqc.py      ★ Phase 3:  weight injection
+├── tools/            Utilities: dequantize, decompress
 ├── docs/             Full documentation + technical paper
 ├── weights/          Model weight outputs (gitignored)
 ├── logs/             Archived run summaries

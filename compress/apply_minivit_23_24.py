@@ -44,12 +44,13 @@ import torch.nn.functional as F
 # ---------------------------------------------------------------------------
 # 路径配置
 # ---------------------------------------------------------------------------
-SOURCE_MODEL_DIR = (
-    "/home/lxy/workspace/RiverOne-QC-4B-v1-AQLM-miniViT/"
-    "AQLM/RiverOne-QC-4B-v2-AQLM-36L"
-)
 SCRIPT_DIR = Path(__file__).resolve().parent
-OUTPUT_DIR = SCRIPT_DIR.parent / "weights" / "miniViT_v2"  # 权重输出到 weights/miniViT_v2/
+PROJECT_DIR = SCRIPT_DIR.parent
+SOURCE_MODEL_DIR = os.environ.get(
+    "MINIVIT_SOURCE_MODEL",
+    str(PROJECT_DIR / "weights" / "RiverOne-QC-4B-MPO-AQLM-2x16-L8L32-AttnMLP"),
+)
+OUTPUT_DIR = PROJECT_DIR / "weights" / "miniViT_23_24"
 
 # MiniViT 配置
 SOURCE_BLOCK_IDX = 23   # 权重复用源（倒数第4层，0-indexed）

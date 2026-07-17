@@ -43,12 +43,13 @@ from safetensors.torch import load_file, save_file
 # 路径配置
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-SOURCE_DIR = (
-    "/home/lxy/workspace/RiverOne-QC-4B-v1-AQLM-miniViT/"
-    "AQLM/RiverOne-QC-4B-v2-AQLM-36L"
+PROJECT_DIR = SCRIPT_DIR.parent
+SOURCE_DIR = os.environ.get(
+    "MINIVIT_TEACHER_MODEL",
+    str(PROJECT_DIR / "weights" / "RiverOne-QC-4B-MPO-AQLM-2x16-L8L32-AttnMLP"),
 )
-MINIVIT_DIR = str(SCRIPT_DIR.parent / "weights" / "miniViT_v2")
-OUTPUT_DIR = SCRIPT_DIR.parent / "weights" / "miniViT_v2_distilled"
+MINIVIT_DIR = str(PROJECT_DIR / "weights" / "miniViT_23_24")
+OUTPUT_DIR = PROJECT_DIR / "weights" / "miniViT_23_24_distilled"
 
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 LOG_EVERY = 10  # 每 N 步打印损失
