@@ -83,6 +83,59 @@ def _clear_modeling_cache():
             del sys.modules[mod_name]
 
 
+def _load_aqlm_for_vit(model, model_dir: str):
+    """为 LLM 加载 AQLM 量化权重。蒸馏只用到 ViT，但需保证 LLM 权重正确以防 OOM。"""
+    from collections import defaultdict
+
+    qc = Path(model_dir) / "quant_config.json"
+    if not qc.exists():
+        return
+    if json.loads(open(qc).read()).get("quantization_method") != "AQLM":
+        return
+
+    from aqlm import QuantizedLinear as AQLMLinear
+
+    idx = json.loads(
+        (Path(model_dir) / "model.safetensors.index.json").read_text()
+    )
+    wm = idx["weight_map"]
+
+    grp = defaultdict(dict)
+    for k in wm:
+        if k.endswith(".codebooks"):
+            grp[k[:-10]]["cb"] = k
+        elif k.endswith(".codes"):
+            grp[k[:-6]]["cd"] = k
+        elif k.endswith(".scales"):
+            grp[k[:-7]]["sc"] = k
+
+    tens = {}
+    for s in sorted(set(wm.values())):
+        p = Path(model_dir) / s
+        if p.exists():
+            tens.update(load_file(str(p)))
+
+    layers = model.language_model.model.layers
+    for base, info in grp.items():
+        parts = base.split(".")
+        li = int(parts[3])
+        sp = parts[4:]
+        cb, cd, sc = tens[info["cb"]], tens[info["cd"]], tens[info["sc"]]
+        nc, cs, og, ig = cb.shape
+        ql = AQLMLinear(
+            cd.shape[1] * ig, cd.shape[0] * og, ig, og, nc,
+            cs.bit_length() - 1, bias=False, dtype=cb.dtype,
+        )
+        ql.codebooks.data.copy_(cb)
+        ql.codes.data.copy_(cd.to(ql.codes.dtype))
+        ql.scales.data.copy_(sc)
+        parent = layers[li]
+        for seg in sp[:-1]:
+            parent = getattr(parent, seg)
+        ql = ql.to(next(parent.parameters()).device)
+        setattr(parent, sp[-1], ql)
+
+
 def load_teacher():
     """加载原始 RiverOne-QC-4B-v2 作为 Teacher。"""
     _clear_modeling_cache()
@@ -94,6 +147,7 @@ def load_teacher():
     model = AutoModel.from_pretrained(
         SOURCE_DIR, trust_remote_code=True, torch_dtype=torch.bfloat16,
     )
+    _load_aqlm_for_vit(model, SOURCE_DIR)
     model.eval()
     for p in model.parameters():
         p.requires_grad = False
@@ -112,6 +166,9 @@ def load_student():
     model = AutoModel.from_pretrained(
         MINIVIT_DIR, trust_remote_code=True, torch_dtype=torch.bfloat16,
     )
+
+    # ★ 加载 AQLM 量化权重（关键：否则随机初始化 4.8B 参数会 OOM）
+    _load_aqlm_for_vit(model, MINIVIT_DIR)
 
     # 冻结全部
     for p in model.parameters():
