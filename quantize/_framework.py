@@ -144,10 +144,12 @@ FINETUNE_LR: float = 1e-5
 FINETUNE_BATCH_SIZE: int = 1
 
 # --- 硬件/性能配置 ---
-DEVICES: List[str] = ["cuda:0"]
-KMEANS_DEVICES: List[str] = ["cuda:0"]
+# C500 兼容: 自动检测可用 GPU，不再硬编码 "cuda:0"
+import tools.c500_compat as _c5c
+DEVICES: List[str] = _c5c.get_default_devices()
+KMEANS_DEVICES: List[str] = _c5c.get_default_devices()
+ATTN_IMPLEMENTATION: str = _c5c.get_attn_implementation() or "eager"
 DTYPE: str = "bfloat16"
-ATTN_IMPLEMENTATION: str = "eager"
 OFFLOAD_ACTIVATIONS: bool = False
 USE_CHECKPOINTING: bool = False
 SKIP_OUT_LOSS: bool = False

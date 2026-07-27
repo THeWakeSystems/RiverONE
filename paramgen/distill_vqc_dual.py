@@ -44,7 +44,7 @@ from vqc_models import VQCWeightGenerator
 #  Config
 # ═══════════════════════════════════════════════════════════════
 
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+DEVICE = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
 TARGET_BLOCKS = [22, 24]
 SOURCE_BLOCKS = {22: 21, 24: 23}
 

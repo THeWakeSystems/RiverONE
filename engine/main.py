@@ -177,7 +177,11 @@ def get_inps(
 
 @torch.no_grad()
 def quantize_aq(model: PreTrainedModel, data: Sequence, val_data: Optional[Sequence], args: Namespace):
-    assert not torch.backends.cuda.matmul.allow_tf32
+    # TF32 assertion: 只在支持 TF32 的平台上执行
+    try:
+        assert not torch.backends.cuda.matmul.allow_tf32
+    except (AttributeError, RuntimeError):
+        pass  # C500 等平台不支持 TF32
     print("\nStarting AQ quantization ...")
     inps, forward_args = get_inps(model, data, args.model_seqlen, args.devices, args.offload_activations)
     outs = [torch.zeros_like(inp_tensor, pin_memory=inp_tensor.is_pinned()) for inp_tensor in inps]
@@ -852,8 +856,11 @@ def main():
     )
 
     torch.set_num_threads(min(16, torch.get_num_threads()))
-    torch.backends.cudnn.allow_tf32 = False
-    torch.backends.cuda.matmul.allow_tf32 = False
+    try:
+        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cuda.matmul.allow_tf32 = False
+    except (AttributeError, RuntimeError):
+        pass  # C500 等平台不支持 TF32 设置
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

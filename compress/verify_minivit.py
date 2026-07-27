@@ -27,7 +27,7 @@ SOURCE = (
 )
 MINIVIT = str(SCRIPT_DIR.parent / "weights" / "miniViT")
 DISTILLED = str(SCRIPT_DIR.parent / "weights" / "miniViT_distilled")
-DEVICE = "cuda:0"
+DEVICE = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
 
 
 def log(msg):

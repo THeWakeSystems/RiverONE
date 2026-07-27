@@ -160,7 +160,7 @@ def resolve_target_layers(model, num_last_layers):
 
 @torch.no_grad()
 def update_outs(layer, inps, outs, **forward_args):
-    gpu_device = torch.device("cuda:0")
+    gpu_device = torch.device(f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu")
     layer = layer.to(device=gpu_device)
     layer_dtype = next(layer.parameters()).dtype
 
