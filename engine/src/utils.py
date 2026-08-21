@@ -97,13 +97,17 @@ def using_tf32(enabled: bool):
     try:
         was_cudnn = torch.backends.cudnn.allow_tf32
         was_matmul = torch.backends.cuda.matmul.allow_tf32
+    except (AttributeError, RuntimeError):
+        was_cudnn = was_matmul = None  # C500 等平台不支持 TF32
+    if was_cudnn is not None:
         torch.backends.cudnn.allow_tf32 = enabled
         torch.backends.cuda.matmul.allow_tf32 = enabled
+    try:
         yield
-        torch.backends.cudnn.allow_tf32 = was_cudnn
-        torch.backends.cuda.matmul.allow_tf32 = was_matmul
-    except (AttributeError, RuntimeError):
-        yield  # C500 等平台不支持 TF32, 静默跳过
+    finally:
+        if was_cudnn is not None:
+            torch.backends.cudnn.allow_tf32 = was_cudnn
+            torch.backends.cuda.matmul.allow_tf32 = was_matmul
 
 
 def iterate_minibatches(
