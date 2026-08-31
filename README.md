@@ -14,6 +14,8 @@
   <a href="docs/compress.md"><img src="https://img.shields.io/badge/docs-compress-blue"></a>
   <a href="docs/PV_TUNING_TECHNICAL_DOC.md"><img src="https://img.shields.io/badge/paper-PV_Tuning-red"></a>
   <a href="https://riverone.vip.cpolar.cn"><img src="https://img.shields.io/badge/demo-🖥️_live-green"></a>
+  <a href="https://arxiv.org/abs/2606.29966"><img src="https://img.shields.io/badge/paper-arXiv-8B0000?logo=arxiv&logoColor=white"></a>
+  <a href="https://huggingface.co/ThewakeRiver/RiverONE"><img src="https://img.shields.io/badge/🤗_model-Hugging_Face-FFD21E"></a>
 </p>
 
 <p align="center">
@@ -276,7 +278,8 @@ RiverONE/
 | MiniViT: Compressing Vision Transformers with Weight Multiplexing | CVPR 2022 | [arXiv 2204.07154](https://arxiv.org/abs/2204.07154) |
 | PV-Tuning: Beyond Straight-Through Estimation | NeurIPS 2024 | [arXiv 2405.14852](https://arxiv.org/abs/2405.14852) |
 | VQC-MLPNet: An Unconventional Hybrid Quantum-Classical Architecture for Scalable and Robust Quantum Machine Learning | preprint | [arXiv:2506.10275](https://arxiv.org/abs/2506.10275)
-| RiverONE: Generating Knowledge-Intensive VLM by Simulated Quantum Machines | Submit to WAIC 2026 | [PDF](docs/waic_workshop.pdf) |
+| RiverONE: Generating Knowledge-Intensive VLM by Simulated Quantum Machines | WAIC 2026 | [arXiv 2606.29966](https://arxiv.org/abs/2606.29966) · [PDF](docs/waic_workshop.pdf) |
+| RiverONE-QC-4B-v1 Checkpoint | Hugging Face | [🤗 ThewakeRiver/RiverONE](https://huggingface.co/ThewakeRiver/RiverONE) |
 
 ---
 
