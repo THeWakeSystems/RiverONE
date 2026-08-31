@@ -16,6 +16,7 @@
   <a href="https://riverone.vip.cpolar.cn"><img src="https://img.shields.io/badge/demo-🖥️_live-green"></a>
   <a href="https://arxiv.org/abs/2606.29966"><img src="https://img.shields.io/badge/paper-arXiv-8B0000?logo=arxiv&logoColor=white"></a>
   <a href="https://huggingface.co/ThewakeRiver/RiverONE"><img src="https://img.shields.io/badge/🤗_model-Hugging_Face-FFD21E"></a>
+  <a href="https://www.modelscope.cn/models/ThewakeRiverYtzLab/RiverONE"><img src="https://img.shields.io/badge/ModelScope-model-5F6B8A"></a>
 </p>
 
 <p align="center">
@@ -280,6 +281,7 @@ RiverONE/
 | VQC-MLPNet: An Unconventional Hybrid Quantum-Classical Architecture for Scalable and Robust Quantum Machine Learning | preprint | [arXiv:2506.10275](https://arxiv.org/abs/2506.10275)
 | RiverONE: Generating Knowledge-Intensive VLM by Simulated Quantum Machines | WAIC 2026 | [arXiv 2606.29966](https://arxiv.org/abs/2606.29966) · [PDF](docs/waic_workshop.pdf) |
 | RiverONE-QC-4B-v1 Checkpoint | Hugging Face | [🤗 ThewakeRiver/RiverONE](https://huggingface.co/ThewakeRiver/RiverONE) |
+| RiverONE-QC-4B-v1 Checkpoint | ModelScope (魔塔) | [ThewakeRiverYtzLab/RiverONE](https://www.modelscope.cn/models/ThewakeRiverYtzLab/RiverONE) |
 
 ---
 
