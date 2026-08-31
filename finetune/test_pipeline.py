@@ -8,7 +8,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "engine"))
 from src.utils import _dequantize_weight
 from transformers import AutoModel
 
-torch.backends.cuda.matmul.allow_tf32 = True
+import os
+try:
+    torch.backends.cuda.matmul.allow_tf32 = True
+except (AttributeError, RuntimeError):
+    pass  # C500 等平台不支持 TF32
 
 model_dir = Path("/home/lxy/AQLM-32L-AttnMix_miniViT")
 print("Loading model on CPU...")

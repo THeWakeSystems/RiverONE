@@ -93,13 +93,21 @@ def _dequantize_weight(
 
 @contextlib.contextmanager
 def using_tf32(enabled: bool):
-    was_cudnn = torch.backends.cudnn.allow_tf32
-    was_matmul = torch.backends.cuda.matmul.allow_tf32
-    torch.backends.cudnn.allow_tf32 = enabled
-    torch.backends.cuda.matmul.allow_tf32 = enabled
-    yield
-    torch.backends.cudnn.allow_tf32 = was_cudnn
-    torch.backends.cuda.matmul.allow_tf32 = was_matmul
+    """安全启用/禁用 TF32。C500 不支持 TF32 时静默跳过。"""
+    try:
+        was_cudnn = torch.backends.cudnn.allow_tf32
+        was_matmul = torch.backends.cuda.matmul.allow_tf32
+    except (AttributeError, RuntimeError):
+        was_cudnn = was_matmul = None  # C500 等平台不支持 TF32
+    if was_cudnn is not None:
+        torch.backends.cudnn.allow_tf32 = enabled
+        torch.backends.cuda.matmul.allow_tf32 = enabled
+    try:
+        yield
+    finally:
+        if was_cudnn is not None:
+            torch.backends.cudnn.allow_tf32 = was_cudnn
+            torch.backends.cuda.matmul.allow_tf32 = was_matmul
 
 
 def iterate_minibatches(

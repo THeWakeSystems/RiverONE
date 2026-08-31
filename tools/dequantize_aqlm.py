@@ -159,7 +159,7 @@ def main():
     import torch as t
     from transformers import AutoModel
     
-    device = t.device("cuda:0")
+    device = t.device(f"cuda:{t.cuda.current_device()}" if t.cuda.is_available() else "cpu")
     model = AutoModel.from_pretrained(
         str(OUTPUT_PATH), torch_dtype=t.bfloat16, trust_remote_code=True, device_map=None
     ).to(device).eval()

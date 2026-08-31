@@ -51,7 +51,7 @@ SOURCE_DIR = os.environ.get(
 MINIVIT_DIR = str(PROJECT_DIR / "weights" / "miniViT_23_24")
 OUTPUT_DIR = PROJECT_DIR / "weights" / "miniViT_23_24_distilled"
 
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+DEVICE = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
 LOG_EVERY = 10  # 每 N 步打印损失
 
 # MiniViT 配置（与 apply_minivit.py 一致）

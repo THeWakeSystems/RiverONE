@@ -53,7 +53,7 @@ DATA_DIR = os.environ.get(
 IMAGE_DIR = Path(DATA_DIR) / "images"
 TRAIN_JSON = Path(DATA_DIR) / "train.json"
 
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+DEVICE = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
 LOG_EVERY = 10
 
 # MiniViT 配置
